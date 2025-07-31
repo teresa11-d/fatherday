@@ -141,42 +141,53 @@
     }
 
     function downloadImage() {
-      const canvas = document.getElementById('canvas');
-      const ctx = canvas.getContext('2d');
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
+  const canvas = document.getElementById('canvas');
+  const ctx = canvas.getContext('2d');
 
-      const elements = Array.from(container.querySelectorAll('.item'))
-        .sort((a, b) => parseInt(a.style.zIndex || 1) - parseInt(b.style.zIndex || 1));
+  // 設定畫布大小，例如 1080x1920
+  const canvasWidth = 1080;
+  const canvasHeight = 1920;
+  canvas.width = canvasWidth;
+  canvas.height = canvasHeight;
+  ctx.clearRect(0, 0, canvasWidth, canvasHeight);
 
-      const drawAll = async () => {
-        for (const el of elements) {
-          const x = parseInt(el.style.left);
-          const y = parseInt(el.style.top);
-          if (el.tagName === 'IMG') {
-            await new Promise((res) => {
-              const img = new Image();
-              img.crossOrigin = 'anonymous';
-              img.src = el.src;
-              img.onload = () => {
-                ctx.drawImage(img, x, y, img.width, img.height);
-                res();
-              };
-            });
-          } else if (el.tagName === 'DIV') {
-            ctx.font = '20px Arial';
-            ctx.fillStyle = el.style.color || 'black';
-            ctx.fillText(el.textContent, x, y + 20);
-          }
-        }
+  const elements = Array.from(container.querySelectorAll('.item'))
+    .sort((a, b) => parseInt(a.style.zIndex || 1) - parseInt(b.style.zIndex || 1));
 
-        const link = document.createElement('a');
-        link.download = 'character.png';
-        link.href = canvas.toDataURL();
-        link.click();
-      };
+  const drawAll = async () => {
+    for (const el of elements) {
+      const x = parseFloat(el.style.left);
+      const y = parseFloat(el.style.top);
+      const scale = el.dataset.scale ? parseFloat(el.dataset.scale) : 1;
 
-      drawAll();
+      if (el.tagName === 'IMG') {
+        await new Promise((res) => {
+          const img = new Image();
+          img.crossOrigin = 'anonymous';
+          img.src = el.src;
+          img.onload = () => {
+            const width = img.width * scale;
+            const height = img.height * scale;
+            ctx.drawImage(img, x, y, width, height);
+            res();
+          };
+        });
+      } else if (el.tagName === 'DIV') {
+        ctx.font = '20px Arial';
+        ctx.fillStyle = el.style.color || 'black';
+        ctx.fillText(el.textContent, x, y + 20);
+      }
     }
+
+    const link = document.createElement('a');
+    link.download = 'character.png';
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+  };
+
+  drawAll();
+}
+
 
     function clearAccessories() {
       const items = container.querySelectorAll('.item');
