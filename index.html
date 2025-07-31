@@ -16,19 +16,19 @@
 
     #container {
       position: relative;
-      width: 270px;
-      height: 480px;
+      width: 360px;
+      height: 640px;
       border: 2px solid #ccc;
       background-color: #fff;
       margin-bottom: 15px;
       box-shadow: 0 0 10px rgba(0,0,0,0.1);
-      touch-action: none;
     }
 
     .item {
       position: absolute;
-      touch-action: none;
-      transform-origin: top left;
+      cursor: move;
+      max-width: 100%;
+      max-height: 100%;
     }
 
     #buttons {
@@ -62,16 +62,24 @@
   <h2>角色換裝頁面</h2>
 
   <div id="container">
-    <img src="img/base.png" class="item" style="left: 0; top: 0; z-index: 1;" data-scale="1" />
+    <!-- 初始角色 -->
+    <img src="img/base.png" class="item" style="left: 0; top: 0; z-index: 1;" />
   </div>
 
   <div id="buttons">
+    <!-- 衣服配件 -->
     <button onclick="addImage('img/clothes1.png', 2)">衣服1</button>
     <button onclick="addImage('img/clothes2.png', 2)">衣服2</button>
+
+    <!-- 框架配件（z-index: 0） -->
     <button onclick="addImage('img/frame1.png', 0)">邊框1</button>
     <button onclick="addImage('img/frame2.png', 0)">邊框2</button>
+
+    <!-- 文字裝飾 -->
     <button onclick="addText('太棒了！')">裝飾字1</button>
     <button onclick="addText('快來一起玩')">裝飾字2</button>
+
+    <!-- 功能按鈕 -->
     <button onclick="downloadImage()">下載圖片</button>
     <button onclick="clearAccessories()">清除配件</button>
   </div>
@@ -85,16 +93,18 @@
       const img = document.createElement('img');
       img.src = src;
       img.className = 'item';
-      img.style.left = '30px';
-      img.style.top = '30px';
-      img.style.zIndex = zIndex;
-      img.dataset.scale = 1;
       img.onload = () => {
-        img.width = img.naturalWidth;
-        img.height = img.naturalHeight;
-        img.style.transform = 'scale(1)';
+        // 自動縮小圖片到容器大小內
+        const maxWidth = container.clientWidth * 0.8;
+        const maxHeight = container.clientHeight * 0.8;
+        const ratio = Math.min(maxWidth / img.width, maxHeight / img.height, 1);
+        img.width = img.width * ratio;
+        img.height = img.height * ratio;
+        img.style.left = ((container.clientWidth - img.width) / 2) + 'px';
+        img.style.top = ((container.clientHeight - img.height) / 2) + 'px';
       };
-      enableTouchTransform(img);
+      img.style.zIndex = zIndex;
+      makeDraggable(img);
       container.appendChild(img);
     }
 
@@ -107,50 +117,27 @@
       div.style.color = 'red';
       div.style.zIndex = 3;
       div.textContent = text;
-      div.dataset.scale = 1;
-      div.style.transform = 'scale(1)';
-      enableTouchTransform(div);
+      makeDraggable(div);
       container.appendChild(div);
     }
 
-    function enableTouchTransform(el) {
-      let startX, startY, offsetX = 0, offsetY = 0;
-      let startDist = 0, startScale = 1;
+    function makeDraggable(el) {
+      let offsetX = 0, offsetY = 0, isDragging = false;
 
-      const getTouchDistance = (e) => {
-        const dx = e.touches[0].clientX - e.touches[1].clientX;
-        const dy = e.touches[0].clientY - e.touches[1].clientY;
-        return Math.sqrt(dx * dx + dy * dy);
+      el.onmousedown = function(e) {
+        isDragging = true;
+        offsetX = e.clientX - el.offsetLeft;
+        offsetY = e.clientY - el.offsetTop;
+        document.onmousemove = function(e) {
+          if (isDragging) {
+            el.style.left = (e.clientX - offsetX) + 'px';
+            el.style.top = (e.clientY - offsetY) + 'px';
+          }
+        };
+        document.onmouseup = function() {
+          isDragging = false;
+        };
       };
-
-      el.addEventListener('touchstart', function(e) {
-        if (e.touches.length === 1) {
-          startX = e.touches[0].clientX;
-          startY = e.touches[0].clientY;
-          offsetX = parseFloat(el.style.left);
-          offsetY = parseFloat(el.style.top);
-        } else if (e.touches.length === 2) {
-          startDist = getTouchDistance(e);
-          startScale = parseFloat(el.dataset.scale || 1);
-        }
-        e.preventDefault();
-      });
-
-      el.addEventListener('touchmove', function(e) {
-        if (e.touches.length === 1) {
-          const dx = e.touches[0].clientX - startX;
-          const dy = e.touches[0].clientY - startY;
-          el.style.left = `${offsetX + dx}px`;
-          el.style.top = `${offsetY + dy}px`;
-        } else if (e.touches.length === 2) {
-          const dist = getTouchDistance(e);
-          let scale = startScale * (dist / startDist);
-          scale = Math.max(0.2, Math.min(5, scale));
-          el.dataset.scale = scale;
-          el.style.transform = `scale(${scale})`;
-        }
-        e.preventDefault();
-      });
     }
 
     function downloadImage() {
@@ -158,40 +145,33 @@
       const ctx = canvas.getContext('2d');
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-      const scaleX = canvas.width / container.clientWidth;
-      const scaleY = canvas.height / container.clientHeight;
-
       const elements = Array.from(container.querySelectorAll('.item'))
         .sort((a, b) => parseInt(a.style.zIndex || 1) - parseInt(b.style.zIndex || 1));
 
       const drawAll = async () => {
         for (const el of elements) {
-          const x = parseFloat(el.style.left) * scaleX;
-          const y = parseFloat(el.style.top) * scaleY;
-          const scale = parseFloat(el.dataset.scale || 1);
-
+          const x = parseInt(el.style.left);
+          const y = parseInt(el.style.top);
           if (el.tagName === 'IMG') {
             await new Promise((res) => {
               const img = new Image();
               img.crossOrigin = 'anonymous';
               img.src = el.src;
               img.onload = () => {
-                const w = el.width * scale * scaleX;
-                const h = el.height * scale * scaleY;
-                ctx.drawImage(img, x, y, w, h);
+                ctx.drawImage(img, x, y, img.width, img.height);
                 res();
               };
             });
           } else if (el.tagName === 'DIV') {
-            ctx.font = `${20 * scale * scaleY}px Arial`;
+            ctx.font = '20px Arial';
             ctx.fillStyle = el.style.color || 'black';
-            ctx.fillText(el.textContent, x, y + 20 * scale * scaleY);
+            ctx.fillText(el.textContent, x, y + 20);
           }
         }
 
         const link = document.createElement('a');
         link.download = 'character.png';
-        link.href = canvas.toDataURL('image/png');
+        link.href = canvas.toDataURL();
         link.click();
       };
 
