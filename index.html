@@ -16,8 +16,8 @@
 
     #container {
       position: relative;
-      width: 360px; /* 對應 1080 寬的縮小版 (x3) */
-      height: 640px; /* 對應 1920 高的縮小版 (x3) */
+      width: 270px; /* 對應 1080 寬的縮小版 (x3) */
+      height: 480px; /* 對應 1920 高的縮小版 (x3) */
       border: 2px solid #ccc;
       background-color: #fff;
       margin-bottom: 15px;
@@ -92,6 +92,17 @@
     const scaleFactorX = canvasWidth / containerWidth;
     const scaleFactorY = canvasHeight / containerHeight;
 
+    // 置中 base 圖片
+    const baseImg = container.querySelector('.base');
+    baseImg.onload = () => {
+      const ratio = Math.min(containerWidth / baseImg.naturalWidth, containerHeight / baseImg.naturalHeight);
+      const width = baseImg.naturalWidth * ratio;
+      const height = baseImg.naturalHeight * ratio;
+      baseImg.width = width;
+      baseImg.height = height;
+      baseImg.style.left = (containerWidth - width) / 2 + 'px';
+      baseImg.style.top = (containerHeight - height) / 2 + 'px';
+    };
     function addImage(src, zIndex = 2) {
       const img = document.createElement('img');
       img.src = src;
