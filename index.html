@@ -16,12 +16,13 @@
 
     #container {
       position: relative;
-      width: 360px;
-      height: 640px;
+      width: 360px; /* 對應 1080 寬的縮小版 (x3) */
+      height: 640px; /* 對應 1920 高的縮小版 (x3) */
       border: 2px solid #ccc;
       background-color: #fff;
       margin-bottom: 15px;
       box-shadow: 0 0 10px rgba(0,0,0,0.1);
+      overflow: hidden;
     }
 
     .item {
@@ -29,6 +30,7 @@
       cursor: move;
       max-width: 100%;
       max-height: 100%;
+      touch-action: none;
     }
 
     #buttons {
@@ -62,24 +64,16 @@
   <h2>角色換裝頁面</h2>
 
   <div id="container">
-    <!-- 初始角色 -->
     <img src="img/base.png" class="item" style="left: 0; top: 0; z-index: 1;" />
   </div>
 
   <div id="buttons">
-    <!-- 衣服配件 -->
     <button onclick="addImage('img/clothes1.png', 2)">衣服1</button>
     <button onclick="addImage('img/clothes2.png', 2)">衣服2</button>
-
-    <!-- 框架配件（z-index: 0） -->
     <button onclick="addImage('img/frame1.png', 0)">邊框1</button>
     <button onclick="addImage('img/frame2.png', 0)">邊框2</button>
-
-    <!-- 文字裝飾 -->
     <button onclick="addText('太棒了！')">裝飾字1</button>
     <button onclick="addText('快來一起玩')">裝飾字2</button>
-
-    <!-- 功能按鈕 -->
     <button onclick="downloadImage()">下載圖片</button>
     <button onclick="clearAccessories()">清除配件</button>
   </div>
@@ -88,11 +82,21 @@
 
   <script>
     const container = document.getElementById('container');
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+
+    const canvasWidth = canvas.width;
+    const canvasHeight = canvas.height;
+    const containerWidth = container.offsetWidth;
+    const containerHeight = container.offsetHeight;
+    const scaleFactorX = canvasWidth / containerWidth;
+    const scaleFactorY = canvasHeight / containerHeight;
 
     function addImage(src, zIndex = 2) {
       const img = document.createElement('img');
       img.src = src;
       img.className = 'item';
+      img.style.zIndex = zIndex;
       img.onload = () => {
         // 自動縮小圖片到容器大小內
         const maxWidth = container.clientWidth * 0.8;
@@ -103,8 +107,7 @@
         img.style.left = ((container.clientWidth - img.width) / 2) + 'px';
         img.style.top = ((container.clientHeight - img.height) / 2) + 'px';
       };
-      img.style.zIndex = zIndex;
-      makeDraggable(img);
+      enableDrag(img);
       container.appendChild(img);
     }
 
@@ -112,37 +115,61 @@
       const div = document.createElement('div');
       div.className = 'item';
       div.style.left = '30px';
-      div.style.top = '300px';
+      div.style.top = '500px';
       div.style.fontSize = '20px';
       div.style.color = 'red';
       div.style.zIndex = 3;
       div.textContent = text;
-      makeDraggable(div);
+      enableDrag(div);
       container.appendChild(div);
     }
 
-    function makeDraggable(el) {
-      let offsetX = 0, offsetY = 0, isDragging = false;
+    function enableDrag(el) {
+      let offsetX, offsetY, startX, startY, scale = 1;
+
+      const onTouchStart = (e) => {
+        const touch = e.touches[0];
+        startX = touch.clientX;
+        startY = touch.clientY;
+        offsetX = parseInt(el.style.left) || 0;
+        offsetY = parseInt(el.style.top) || 0;
+        e.preventDefault();
+      };
+
+      const onTouchMove = (e) => {
+        const touch = e.touches[0];
+        const dx = touch.clientX - startX;
+        const dy = touch.clientY - startY;
+        el.style.left = `${offsetX + dx}px`;
+        el.style.top = `${offsetY + dy}px`;
+        e.preventDefault();
+      };
+
+      const onWheel = (e) => {
+        scale += e.deltaY * -0.001;
+        scale = Math.min(Math.max(0.1, scale), 5);
+        el.style.transform = `scale(${scale})`;
+        e.preventDefault();
+      };
+
+      el.addEventListener('touchstart', onTouchStart);
+      el.addEventListener('touchmove', onTouchMove);
+      el.addEventListener('wheel', onWheel);
 
       el.onmousedown = function(e) {
-        isDragging = true;
         offsetX = e.clientX - el.offsetLeft;
         offsetY = e.clientY - el.offsetTop;
         document.onmousemove = function(e) {
-          if (isDragging) {
-            el.style.left = (e.clientX - offsetX) + 'px';
-            el.style.top = (e.clientY - offsetY) + 'px';
-          }
+          el.style.left = (e.clientX - offsetX) + 'px';
+          el.style.top = (e.clientY - offsetY) + 'px';
         };
         document.onmouseup = function() {
-          isDragging = false;
+          document.onmousemove = null;
         };
       };
     }
 
     function downloadImage() {
-      const canvas = document.getElementById('canvas');
-      const ctx = canvas.getContext('2d');
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
       const elements = Array.from(container.querySelectorAll('.item'))
@@ -150,22 +177,27 @@
 
       const drawAll = async () => {
         for (const el of elements) {
-          const x = parseInt(el.style.left);
-          const y = parseInt(el.style.top);
+          const x = parseFloat(el.style.left) * scaleFactorX;
+          const y = parseFloat(el.style.top) * scaleFactorY;
+          const width = el.offsetWidth * scaleFactorX;
+          const height = el.offsetHeight * scaleFactorY;
+          const scaleMatch = el.style.transform?.match(/scale\(([\d.]+)\)/);
+          const scale = scaleMatch ? parseFloat(scaleMatch[1]) : 1;
+
           if (el.tagName === 'IMG') {
             await new Promise((res) => {
               const img = new Image();
               img.crossOrigin = 'anonymous';
               img.src = el.src;
               img.onload = () => {
-                ctx.drawImage(img, x, y, img.width, img.height);
+                ctx.drawImage(img, x, y, width * scale, height * scale);
                 res();
               };
             });
           } else if (el.tagName === 'DIV') {
-            ctx.font = '20px Arial';
+            ctx.font = `${20 * scaleFactorY * scale}px Arial`;
             ctx.fillStyle = el.style.color || 'black';
-            ctx.fillText(el.textContent, x, y + 20);
+            ctx.fillText(el.textContent, x, y + 20 * scaleFactorY * scale);
           }
         }
 
@@ -181,7 +213,7 @@
     function clearAccessories() {
       const items = container.querySelectorAll('.item');
       items.forEach((el, idx) => {
-        if (idx !== 0) el.remove(); // 保留初始角色圖
+        if (idx !== 0) el.remove(); // 保留 base
       });
     }
   </script>
