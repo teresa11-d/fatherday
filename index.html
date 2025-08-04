@@ -19,7 +19,7 @@
       width: 270px;
       height: 480px;
       border: 2px solid #ccc;
-      background-color: #fff;
+      background-color: #f5fbff;
       margin-bottom: 15px;
       box-shadow: 0 0 10px rgba(0,0,0,0.1);
       overflow: hidden;
@@ -40,6 +40,7 @@
       gap: 8px;
       justify-content: center;
       margin-bottom: 10px;
+      align-items: flex-start;
     }
 
     button {
@@ -47,21 +48,24 @@
       font-size: 14px;
       border-radius: 6px;
       border: none;
-      background-color: #1976d2;
+      background-color: #225991;
       color: white;
       cursor: pointer;
     }
 
+    .green-button {
+      background-color: #307332;
+    }
+    .red-button {
+      background-color: #cc322f;
+    }
+
     button:hover {
-      background-color: #145ea8;
+      background-color: #1c4671;
     }
 
     #rotation-slider {
-      position: fixed;
-      bottom: 20px;
-      left: 50%;
-      transform: translateX(-50%);
-      z-index: 9999;
+      margin-top: 10px;
       width: 200px;
       display: none;
     }
@@ -72,7 +76,7 @@
   </style>
 </head>
 <body>
-  <h2>角色換裝頁面</h2>
+  <h2 style="font-family: 'Roboto', sans-serif; color:rgb(18, 64, 150);">爸氣style自訂款</h2>
 
   <div id="container">
     <img id="base" src="img/base.png" class="item" style="z-index: 1;" />
@@ -84,13 +88,15 @@
     <button onclick="addImage('img/frame1.png', 1)">邊框</button>
     <button onclick="addImage('img/frame2.png', 1)">配件</button>
     <button onclick="addText('父親節快樂')">裝飾字1</button>
-    <button onclick="addText('Happy Fahter\'s Day')">裝飾字2</button>
-    <button onclick="downloadImage()">下載圖片</button>
-    <button onclick="clearAccessories()">清除配件</button>
+    <button onclick="addText('Happy Father\'s Day')">裝飾字2</button>
+  </div>
+  <div id="buttons">
+    <button class="green-button" onclick="downloadImage()">下載圖片</button>
+    <button class="red-button" onclick="clearAccessories()">清除配件</button>
   </div>
 
-  <canvas id="canvas" width="1080" height="1920"></canvas>
   <input type="range" id="rotation-slider" min="0" max="360" value="0">
+  <canvas id="canvas" width="1080" height="1920"></canvas>
 
   <script>
     const container = document.getElementById('container');
@@ -107,7 +113,6 @@
     const scaleFactorY = canvasHeight / containerHeight;
 
     const baseImg = document.getElementById('base');
-    // 初始化底圖的旋轉與縮放數值
     baseImg.dataset.rotation = "0";
     baseImg.dataset.scale = "1";
 
@@ -119,7 +124,6 @@
       baseImg.height = height;
       baseImg.style.left = (containerWidth - width) / 2 + 'px';
       baseImg.style.top = (containerHeight - height) / 2 + 'px';
-
       enableDragAndZoom(baseImg);
     };
 
@@ -207,8 +211,7 @@
           const dy = e.touches[0].clientY - e.touches[1].clientY;
           startDist = Math.sqrt(dx * dx + dy * dy);
           initialScale = scale = parseFloat(el.dataset.scale) || 1;
-          startAngle = Math.atan2(dy, dx);
-          initialRotation = rotation = parseFloat(el.dataset.rotation) || 0;
+          // 移除旋轉計算
         }
         selectElement(el);
       });
@@ -225,14 +228,13 @@
           const dy = e.touches[0].clientY - e.touches[1].clientY;
           const currentDist = Math.sqrt(dx * dx + dy * dy);
           scale = Math.max(0.2, Math.min(5, initialScale * (currentDist / startDist)));
-          const angle = Math.atan2(dy, dx);
-          rotation = initialRotation + (angle - startAngle) * (180 / Math.PI);
           el.dataset.scale = scale;
-          el.dataset.rotation = rotation;
+          const rotation = parseFloat(el.dataset.rotation) || 0;
           el.style.transform = `scale(${scale}) rotate(${rotation}deg)`;
         }
         e.preventDefault();
       });
+
 
       el.addEventListener('touchend', () => {
         isDragging = false;
@@ -277,6 +279,9 @@
 
     function downloadImage() {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = '#f0f4f8';  // 填入淡藍背景
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
       const elements = Array.from(container.querySelectorAll('.item'))
         .sort((a, b) => parseInt(a.style.zIndex || 1) - parseInt(b.style.zIndex || 1));
 
