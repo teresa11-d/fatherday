@@ -56,6 +56,16 @@
       background-color: #145ea8;
     }
 
+    #rotation-slider {
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 9999;
+      width: 200px;
+      display: none;
+    }
+
     canvas {
       display: none;
     }
@@ -71,20 +81,23 @@
   <div id="buttons">
     <button onclick="addImage('img/clothes1.png', 2)">衣服1</button>
     <button onclick="addImage('img/clothes2.png', 2)">衣服2</button>
-    <button onclick="addImage('img/frame1.png', 0)">邊框1</button>
-    <button onclick="addImage('img/frame2.png', 0)">邊框2</button>
-    <button onclick="addText('太棒了！')">裝飾字1</button>
-    <button onclick="addText('快來一起玩')">裝飾字2</button>
+    <button onclick="addImage('img/frame1.png', 1)">邊框1</button>
+    <button onclick="addImage('img/frame2.png', 1)">邊框2</button>
+    <button onclick="addText('父親節快樂')">裝飾字1</button>
+    <button onclick="addText('Happy Fahter\'s Day')">裝飾字2</button>
     <button onclick="downloadImage()">下載圖片</button>
     <button onclick="clearAccessories()">清除配件</button>
   </div>
 
   <canvas id="canvas" width="1080" height="1920"></canvas>
+  <input type="range" id="rotation-slider" min="0" max="360" value="0">
 
   <script>
     const container = document.getElementById('container');
     const canvas = document.getElementById('canvas');
     const ctx = canvas.getContext('2d');
+    const rotationSlider = document.getElementById('rotation-slider');
+    let selectedElement = null;
 
     const canvasWidth = canvas.width;
     const canvasHeight = canvas.height;
@@ -94,6 +107,10 @@
     const scaleFactorY = canvasHeight / containerHeight;
 
     const baseImg = document.getElementById('base');
+    // 初始化底圖的旋轉與縮放數值
+    baseImg.dataset.rotation = "0";
+    baseImg.dataset.scale = "1";
+
     baseImg.onload = () => {
       const ratio = Math.min(containerWidth / baseImg.naturalWidth, containerHeight / baseImg.naturalHeight);
       const width = baseImg.naturalWidth * ratio;
@@ -102,7 +119,30 @@
       baseImg.height = height;
       baseImg.style.left = (containerWidth - width) / 2 + 'px';
       baseImg.style.top = (containerHeight - height) / 2 + 'px';
+
+      enableDragAndZoom(baseImg);
     };
+
+    function selectElement(el) {
+      selectedElement = el;
+      const currentRotation = parseFloat(el.dataset.rotation) || 0;
+      rotationSlider.value = currentRotation;
+      rotationSlider.style.display = 'block';
+    }
+
+    rotationSlider.addEventListener('input', () => {
+      if (!selectedElement) return;
+      const angle = parseFloat(rotationSlider.value);
+      selectedElement.dataset.rotation = angle;
+      selectedElement.style.transform = `scale(${selectedElement.dataset.scale || 1}) rotate(${angle}deg)`;
+    });
+
+    container.addEventListener('click', (e) => {
+      if (!e.target.classList.contains('item')) {
+        selectedElement = null;
+        rotationSlider.style.display = 'none';
+      }
+    });
 
     function addImage(src, zIndex = 2) {
       const img = document.createElement('img');
@@ -132,11 +172,17 @@
       div.style.left = '30px';
       div.style.top = '100px';
       div.style.fontSize = '20px';
-      div.style.color = 'red';
+      div.style.color = '#D0E3FF';
       div.style.zIndex = 3;
       div.textContent = text;
       div.dataset.rotation = "0";
       div.dataset.scale = "1";
+
+      div.style.textShadow = `
+        1px 1px 0 #1E2F6F,
+        2px 2px 0 #1B2B69,
+        2.5px 2.5px 0 #16245A
+      `;
       enableDragAndZoom(div);
       container.appendChild(div);
     }
@@ -164,6 +210,7 @@
           startAngle = Math.atan2(dy, dx);
           initialRotation = rotation = parseFloat(el.dataset.rotation) || 0;
         }
+        selectElement(el);
       });
 
       el.addEventListener('touchmove', (e) => {
@@ -178,10 +225,8 @@
           const dy = e.touches[0].clientY - e.touches[1].clientY;
           const currentDist = Math.sqrt(dx * dx + dy * dy);
           scale = Math.max(0.2, Math.min(5, initialScale * (currentDist / startDist)));
-
           const angle = Math.atan2(dy, dx);
           rotation = initialRotation + (angle - startAngle) * (180 / Math.PI);
-
           el.dataset.scale = scale;
           el.dataset.rotation = rotation;
           el.style.transform = `scale(${scale}) rotate(${rotation}deg)`;
@@ -191,6 +236,10 @@
 
       el.addEventListener('touchend', () => {
         isDragging = false;
+      });
+
+      el.addEventListener('click', () => {
+        selectElement(el);
       });
 
       el.addEventListener('wheel', (e) => {
@@ -214,6 +263,7 @@
         document.onmouseup = function () {
           document.onmousemove = null;
         };
+        selectElement(el);
       };
 
       el.oncontextmenu = function (e) {
@@ -281,6 +331,8 @@
       items.forEach((el) => {
         if (el.id !== 'base') el.remove();
       });
+      selectedElement = null;
+      rotationSlider.style.display = 'none';
     }
   </script>
 </body>
