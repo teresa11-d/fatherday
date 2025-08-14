@@ -76,8 +76,7 @@
   </style>
 </head>
 <body>
-  <h2 style="font-family: 'Roboto', sans-serif; color:rgb(18, 64, 150);">爸氣style自訂款</h2>
-
+  <h2 style="font-family: 'Roboto', sans-serif; color:rgb(18, 64, 150);">爸氣style自訂款<img style="width:30px" src="img/gift.png" alt="點我" onclick="openCakePage()"></h2>
   <div id="container">
     <img id="base" src="img/base.png" class="item" style="z-index: 1;" />
   </div>
@@ -116,6 +115,8 @@
     baseImg.dataset.rotation = "0";
     baseImg.dataset.scale = "1";
 
+    
+
     baseImg.onload = () => {
       const ratio = Math.min(containerWidth / baseImg.naturalWidth, containerHeight / baseImg.naturalHeight);
       const width = baseImg.naturalWidth * ratio;
@@ -126,6 +127,10 @@
       baseImg.style.top = (containerHeight - height) / 2 + 'px';
       enableDragAndZoom(baseImg);
     };
+
+    function openCakePage() {
+      window.open('cake.html', '_blank');
+    }
 
     function selectElement(el) {
       selectedElement = el;
